@@ -14,6 +14,7 @@ class App extends Component {
     this.state = {
       model: null,
       track: null,
+      req: null,
     }
 
   }
@@ -72,14 +73,26 @@ class App extends Component {
   predictObject = async (image, model) => {
     model.detect(image).then(predictions => {
       console.log(JSON.stringify(predictions));
-      requestAnimationFrame(() => {
+      const myReq = requestAnimationFrame(() => {
         this.predictObject(image, model)
       })
+
+      this.setState({ req: myReq })
     })
   }
 
+  /**
+   * Function to stop webcam
+   */
   stopWebcam = () => {
     this.state.track.stop();
+  }
+
+  /**
+   * Function to stop the model from predicting
+   */
+  stopModel = () => {
+    cancelAnimationFrame(this.state.req);
   }
 
 
@@ -87,7 +100,9 @@ class App extends Component {
     return (
       <div className="App">
         <video autoPlay muted width="400" height="400" id="webcam" />
-        <button id="btnStop" onClick={this.stopWebcam}>Stop camera</button>
+        <canvas width="400" height="400" />
+        <button id="btnStop" onClick={this.stopWebcam}>Stop Camera</button>
+        <button id="btnStopModel" onClick={this.stopModel}>Stop Model</button>
       </div>
     );
   }
