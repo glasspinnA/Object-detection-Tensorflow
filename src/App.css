@@ -22,11 +22,22 @@
   color: #61dafb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.video-container{
+  width: 400px;
+  height:400px;
+  background: red;
+  margin:10px auto;
+  position: relative;
+}
+
+video{
+  left:0;
+  position: absolute;
+  z-index: 1;
+}
+
+canvas{
+  left:0;
+  position: absolute;
+  z-index: 2;
 }
