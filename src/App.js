@@ -3,6 +3,7 @@ import './App.css';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import '@tensorflow/tfjs';
 
+import Picture from "./Picture.js"
 
 class App extends Component {
 
@@ -19,9 +20,9 @@ class App extends Component {
   }
 
   componentDidMount = async () => {
-    const model = await this.loadModel();
+    //const model = await this.loadModel();
     this.initCanvas();
-    this.initWebcam(model);
+    //this.initWebcam(model);
   }
 
   /**
@@ -50,7 +51,7 @@ class App extends Component {
    * @param {*} model - The loaded deep learning model, which is used to predict the objects 
    */
   streamVideo(video, model) {
-    const constrains = { video: { facingMode: 'user' } };
+    const constrains = { video: { facingMode: 'user', width: 400, height: 400 } };
 
     if (navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia(constrains)
@@ -171,6 +172,8 @@ class App extends Component {
         </div>
         <button id="btnStop" onClick={this.stopWebcam}>Stop Camera</button>
         <button id="btnStopModel" onClick={this.stopModel}>Stop Model</button>
+
+        <Picture />
       </div>
     );
   }

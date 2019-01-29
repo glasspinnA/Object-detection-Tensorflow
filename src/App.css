@@ -41,3 +41,15 @@ canvas{
   position: absolute;
   z-index: 2;
 }
+
+.canvas-wrapper{
+  height:400px;
+  width:400px;
+  background: blue;
+}
+
+.canvas-wrapper canvas{
+  position: relative;
+  width: 100%;
+  height:auto;
+}
