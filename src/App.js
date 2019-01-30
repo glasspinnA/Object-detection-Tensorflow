@@ -3,8 +3,6 @@ import './App.css';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import '@tensorflow/tfjs';
 
-import Picture from "./Picture.js"
-
 class App extends Component {
 
   constructor(props) {
@@ -14,7 +12,6 @@ class App extends Component {
       model: undefined,
       track: null,
       req: null,
-      canvas: null,
       context: undefined,
       isWebcam: false,
       isLoaded: false,
@@ -42,9 +39,9 @@ class App extends Component {
   /**
    * Function to init the webcam and stream to the video tag
    */
-  initWebcam = async (model) => {
+  initWebcam = () => {
     const video = document.getElementById("webcam");
-    this.streamVideo(video, model);
+    this.streamVideo(video, this.state.model);
 
     this.setState({ isWebcam: true })
   }
@@ -53,12 +50,32 @@ class App extends Component {
    * Function to init the canvas 
    */
   initCanvas() {
-    const canvas = document.getElementById("canvas");
-    const context = canvas.getContext("2d");
+    const context = document.getElementById("canvas").getContext("2d");
 
     this.setState({
       context: context
     });
+  }
+
+  /**
+   * Function to load the model
+   */
+  loadModel = async () => {
+    return await cocoSsd.load();
+  }
+
+  /**
+   * Function to stop webcam
+   */
+  stopWebcam = () => {
+    this.state.track.stop();
+  }
+
+  /**
+   * Function to stop the model from predicting from the webcam
+   */
+  stopModel = () => {
+    cancelAnimationFrame(this.state.req);
   }
 
   /**
@@ -75,79 +92,17 @@ class App extends Component {
 
           video.srcObject = mediaStream;
 
+          const track = mediaStream.getTracks()[0];
+          this.setState({ track: track });
+
           video.onloadedmetadata = () => {
             this.predictObject(video, model);
           }
-
-          const track = mediaStream.getTracks()[0];
-          this.setState({ track: track });
         })
         .catch(error => {
           console.log(error.message);
         })
     }
-  }
-
-
-  /**
-   * Function thats draws a rectangle around the detected object
-   * @param {*} prediciton 
-   */
-  drawRectangle(prediction) {
-    const context = this.state.context;
-
-    if (this.state.isWebcam) context.clearRect(0, 0, 400, 400);
-
-    try {
-
-      for (let i = 0; i < prediction.length; i++) {
-        const coordinates = this.getCoordinates(prediction[i]);
-        const objectName = this.getObjectName(prediction[i]);
-
-        context.beginPath();
-        context.fillText(objectName, coordinates[0], coordinates[1] - 10);
-        context.rect(coordinates[0], coordinates[1], coordinates[2], coordinates[3]);
-        context.stroke();
-
-      }
-    } catch (error) {
-      console.log(error);
-
-    }
-  }
-
-  /**
-   * Function to get the name of the object that is predicted
-   * @param {*} prediciton 
-   */
-  getObjectName(prediciton) {
-    try {
-      return prediciton.class;
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  /**
-   * Function to get coordinates for the object that is predicted 
-   * @param {*} prediciton 
-   */
-  getCoordinates(prediciton) {
-    try {
-      return prediciton.bbox;
-    }
-    catch (error) {
-      console.log(error);
-    }
-
-
-  }
-
-  /**
-   * Function to load the model
-   */
-  loadModel = async () => {
-    return await cocoSsd.load();
   }
 
   /**
@@ -158,9 +113,11 @@ class App extends Component {
 
       if (this.state.isWebcam) {
         console.log((predictions))
+
         const myReq = requestAnimationFrame(() => {
           this.predictObject(image, model)
         })
+
         this.setState({ req: myReq })
       }
 
@@ -169,47 +126,79 @@ class App extends Component {
   }
 
   /**
-   * Function to stop webcam
+   * Function thats draws a rectangle around the detected object
+   * @param {*} prediciton 
    */
-  stopWebcam = () => {
-    this.state.track.stop();
+  drawRectangle(prediction) {
+    const context = this.state.context;
+
+    if (this.state.isWebcam) context.clearRect(0, 0, 400, 400);
+
+    for (let i = 0; i < prediction.length; i++) {
+      const coordinates = this.getCoordinates(prediction[i]);
+      const objectInfo = this.getObjectInfo(prediction[i]);
+
+      context.beginPath();
+      context.fillText(objectInfo, coordinates[0], coordinates[1] - 10);
+      context.rect(coordinates[0], coordinates[1], coordinates[2], coordinates[3]);
+      context.stroke();
+    }
+
   }
 
   /**
-   * Function to stop the model from predicting
+   * Function to get the name and the estimated prediciton accuarcy on the detected object
+   * @param {*} prediciton 
    */
-  stopModel = () => {
-    cancelAnimationFrame(this.state.req);
+  getObjectInfo(prediciton) {
+    return prediciton.class + " " + prediciton.score;
+  }
+
+  /**
+   * Function to get the coordinates for where on the image the object that is detected
+   * Is needed to be able to draw a rectangle around the detected object
+   * @param {*} prediciton 
+   */
+  getCoordinates(prediciton) {
+    return prediciton.bbox;
   }
 
 
-  uploadPictures = () => {
+  /**
+   * Functions thats reads the function and turns the file into an image
+   */
+  readFileAsPicture = () => {
     this.setState({ isWebcam: false })
+
     const fileReader = new FileReader();
-    const context = this.state.context;
-    fileReader.readAsDataURL(document.getElementById("uploader").files[0]);
-
-
     let image = new Image();
+
+    fileReader.readAsDataURL(document.getElementById("uploader").files[0]);
 
     fileReader.onload = function (event) {
       document.getElementById("canvas").src = event.target.result;
       image.src = event.target.result;
     }
 
-
-    if (this.state.context)
-
-      image.onload = () => {
-        this.state.context.drawImage(image, 0, 0, 400, 400);
-        let imageData = context.getImageData(0, 0, 400, 400);
-        console.log(imageData);
-
-        if (this.state.model !== undefined) {
-          this.predictObject(imageData, this.state.model)
-        }
-      }
+    image.onload = () => {
+      this.drawImageOnCanvas(image, this.state.context);
+    }
   }
+
+  /**
+   * Function to draw the user's selected image onto the canvas
+   * when the image is loaded onto the canvas the object detection starts
+   */
+  drawImageOnCanvas = (image, context) => {
+    context.drawImage(image, 0, 0, 400, 400);
+
+    const imageData = context.getImageData(0, 0, 400, 400);
+
+    if (this.state.model !== undefined) {
+      this.predictObject(imageData, this.state.model)
+    }
+  }
+
 
   render() {
     return (
@@ -222,8 +211,8 @@ class App extends Component {
         <button id="btnStop" onClick={this.stopWebcam} disabled={!this.state.isLoaded}>Stop Camera</button>
         <button id="btnStopModel" onClick={this.stopModel} disabled={!this.state.isLoaded}>Stop Model</button>
         <button id="btnStartWebcam" onClick={this.initWebcam} disabled={!this.state.isLoaded}>Start Webcam</button>
-        <button id="btnStartWebcam" onClick={this.initModel} disabled={this.state.isLoaded}>Load Model</button>
-        <input id="uploader" type="file" onChange={this.uploadPictures} disabled={!this.state.isLoaded} />
+        <button id="btnStartWbcam" onClick={this.initModel} disabled={this.state.isLoaded}>Load Model</button>
+        <input id="uploader" type="file" accept="image/*" onChange={this.readFileAsPicture} disabled={!this.state.isLoaded} />
       </div>
     );
   }
