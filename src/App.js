@@ -11,18 +11,32 @@ class App extends Component {
     super(props);
 
     this.state = {
-      model: null,
+      model: undefined,
       track: null,
       req: null,
       canvas: null,
+      context: undefined,
+      isWebcam: false,
+      isLoaded: false,
     }
 
   }
 
-  componentDidMount = async () => {
-    //const model = await this.loadModel();
+  componentDidMount() {
     this.initCanvas();
-    //this.initWebcam(model);
+  }
+
+  /**
+   * Function to load the the model
+   */
+  initModel = async () => {
+    this.setState({
+      model: await this.loadModel()
+    });
+
+    if (this.state.model !== undefined) {
+      this.setState({ isLoaded: true })
+    }
   }
 
   /**
@@ -31,6 +45,8 @@ class App extends Component {
   initWebcam = async (model) => {
     const video = document.getElementById("webcam");
     this.streamVideo(video, model);
+
+    this.setState({ isWebcam: true })
   }
 
   /**
@@ -79,7 +95,9 @@ class App extends Component {
    */
   drawRectangle(prediction) {
     const context = this.state.context;
-    context.clearRect(0, 0, 400, 400);
+
+    if (this.state.isWebcam) context.clearRect(0, 0, 400, 400);
+
     try {
 
       for (let i = 0; i < prediction.length; i++) {
@@ -137,14 +155,16 @@ class App extends Component {
    */
   predictObject = async (image, model) => {
     model.detect(image).then(predictions => {
-      console.log((predictions))
+
+      if (this.state.isWebcam) {
+        console.log((predictions))
+        const myReq = requestAnimationFrame(() => {
+          this.predictObject(image, model)
+        })
+        this.setState({ req: myReq })
+      }
+
       this.drawRectangle(predictions);
-
-      const myReq = requestAnimationFrame(() => {
-        this.predictObject(image, model)
-      })
-
-      this.setState({ req: myReq })
     })
   }
 
@@ -163,6 +183,34 @@ class App extends Component {
   }
 
 
+  uploadPictures = () => {
+    this.setState({ isWebcam: false })
+    const fileReader = new FileReader();
+    const context = this.state.context;
+    fileReader.readAsDataURL(document.getElementById("uploader").files[0]);
+
+
+    let image = new Image();
+
+    fileReader.onload = function (event) {
+      document.getElementById("canvas").src = event.target.result;
+      image.src = event.target.result;
+    }
+
+
+    if (this.state.context)
+
+      image.onload = () => {
+        this.state.context.drawImage(image, 0, 0, 400, 400);
+        let imageData = context.getImageData(0, 0, 400, 400);
+        console.log(imageData);
+
+        if (this.state.model !== undefined) {
+          this.predictObject(imageData, this.state.model)
+        }
+      }
+  }
+
   render() {
     return (
       <div className="App">
@@ -170,10 +218,12 @@ class App extends Component {
           <canvas id="canvas" width="400" height="400" />
           <video autoPlay muted width="400" height="400" id="webcam" />
         </div>
-        <button id="btnStop" onClick={this.stopWebcam}>Stop Camera</button>
-        <button id="btnStopModel" onClick={this.stopModel}>Stop Model</button>
 
-        <Picture />
+        <button id="btnStop" onClick={this.stopWebcam} disabled={!this.state.isLoaded}>Stop Camera</button>
+        <button id="btnStopModel" onClick={this.stopModel} disabled={!this.state.isLoaded}>Stop Model</button>
+        <button id="btnStartWebcam" onClick={this.initWebcam} disabled={!this.state.isLoaded}>Start Webcam</button>
+        <button id="btnStartWebcam" onClick={this.initModel} disabled={this.state.isLoaded}>Load Model</button>
+        <input id="uploader" type="file" onChange={this.uploadPictures} disabled={!this.state.isLoaded} />
       </div>
     );
   }

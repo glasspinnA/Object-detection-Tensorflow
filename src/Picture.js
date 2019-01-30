@@ -33,9 +33,6 @@ class Picture extends Component {
             document.getElementById("image").src = event.target.result;
             image.src = event.target.result;
         }
-
-
-
     }
 
 
