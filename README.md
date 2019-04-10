@@ -10,3 +10,8 @@ Demo can be found at: https://glasspinna.github.io/Object-detection-Tensorflow/
 * It can take some time for the deep learning model to get loaded
 * Can be tested on mobile, tablet and computer
 * Can be a bit laggy depending how good GPU your device have.
+
+# Screenshots
+Screenshot on current version of the "app" (not available and still working on it)
+
+![Screenshot](https://github.com/glasspinnA/Object-detection-Tensorflow/blob/master/tensorflow-screenshot.png)
